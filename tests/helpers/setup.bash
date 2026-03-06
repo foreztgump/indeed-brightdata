@@ -32,10 +32,10 @@ for arg in "$@"; do
 done
 
 if [[ "$has_write_out" == true ]]; then
-  echo "${MOCK_CURL_RESPONSE:-{}}"
+  echo "${MOCK_CURL_RESPONSE:-"{}"}"
   echo "${MOCK_CURL_HTTP_CODE:-200}"
 else
-  echo "${MOCK_CURL_RESPONSE:-{}}"
+  echo "${MOCK_CURL_RESPONSE:-"{}"}"
 fi
 MOCK
   chmod +x "$mock_path/curl"

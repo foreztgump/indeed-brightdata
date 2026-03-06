@@ -10,9 +10,13 @@ readonly LIB_DATASETS_FILE="${LIB_CONFIG_DIR}/datasets.json"
 # Global set by make_api_request for callers to inspect
 HTTP_CODE=""
 
+# File used to persist HTTP_CODE across subshells
+_LIB_HTTP_CODE_FILE="${TMPDIR:-/tmp}/.brightdata_http_code_$$"
+
 # make_api_request <method> <endpoint> [payload]
 # Makes an authenticated API request to Bright Data.
-# Sets global HTTP_CODE. Outputs response body to stdout.
+# Sets global HTTP_CODE (also written to file for subshell access).
+# Outputs response body to stdout.
 # Returns 0 always (caller checks HTTP_CODE via check_http_status).
 make_api_request() {
   local method="$1"
@@ -29,11 +33,19 @@ make_api_request() {
   local response
   response=$(curl "${curl_args[@]}" "$endpoint")
   HTTP_CODE=$(echo "$response" | tail -1)
+  echo "$HTTP_CODE" > "$_LIB_HTTP_CODE_FILE"
   local body
   body=$(echo "$response" | sed '$d')
 
   echo "$body"
   return 0
+}
+
+# _read_http_code — read HTTP_CODE from file (use after subshell calls)
+_read_http_code() {
+  if [[ -f "$_LIB_HTTP_CODE_FILE" ]]; then
+    HTTP_CODE=$(cat "$_LIB_HTTP_CODE_FILE")
+  fi
 }
 
 # check_http_status <http_code> <body> <action_description>
