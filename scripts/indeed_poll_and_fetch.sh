@@ -10,8 +10,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_DIR
 source "${SCRIPT_DIR}/_lib.sh"
 
-readonly DEFAULT_TIMEOUT=300
-readonly DEFAULT_INTERVAL=10
+readonly DEFAULT_TIMEOUT=600
+readonly DEFAULT_INTERVAL=20
 
 show_help() {
   cat >&2 <<'EOF'
@@ -23,9 +23,16 @@ Arguments:
   snapshot_id          The snapshot ID returned by a /trigger call
 
 Options:
-  --timeout SECONDS    Max time to wait (default: 300)
-  --interval SECONDS   Poll interval (default: 10)
+  --timeout SECONDS    Max time to wait (default: 600)
+  --interval SECONDS   Poll interval (default: 20)
+  --description TEXT   Query description (saved to pending.json on timeout)
+  --dataset-type TYPE  Dataset type: jobs or company (saved to pending.json on timeout)
   --help               Show this help message
+
+Exit Codes:
+  0    Success — results on stdout
+  1    Error — something failed
+  2    Deferred — still processing, saved to pending.json
 
 Output:
   JSON array to stdout
@@ -33,16 +40,26 @@ EOF
   exit 0
 }
 
+# shellcheck disable=SC2034
 parse_args() {
   SNAPSHOT_ID=""
   TIMEOUT="$DEFAULT_TIMEOUT"
   INTERVAL="$DEFAULT_INTERVAL"
+  DESCRIPTION=""
+  DATASET_TYPE=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --help) show_help ;;
-      --timeout) TIMEOUT="$2"; shift 2 ;;
-      --interval) INTERVAL="$2"; shift 2 ;;
+      --timeout|--interval|--description|--dataset-type)
+        [[ -n "${2:-}" ]] || { echo "Error: $1 requires a value" >&2; exit 1; }
+        case "$1" in
+          --timeout) TIMEOUT="$2" ;;
+          --interval) INTERVAL="$2" ;;
+          --description) DESCRIPTION="$2" ;;
+          --dataset-type) DATASET_TYPE="$2" ;;
+        esac
+        shift 2 ;;
       -*) echo "Unknown option: $1" >&2; exit 1 ;;
       *) SNAPSHOT_ID="$1"; shift ;;
     esac
@@ -106,6 +123,11 @@ main() {
     esac
   done
 
+  if [[ -n "$DESCRIPTION" && -n "$DATASET_TYPE" ]]; then
+    save_pending "$SNAPSHOT_ID" "$DESCRIPTION" "$DATASET_TYPE" "indeed_poll_and_fetch.sh"
+    echo "Still processing. Saved snapshot ${SNAPSHOT_ID} for later. Check with indeed_check_pending.sh" >&2
+    exit 2
+  fi
   echo "Error: timed out after ${TIMEOUT}s waiting for snapshot ${SNAPSHOT_ID}" >&2
   return 1
 }
