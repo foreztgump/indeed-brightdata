@@ -7,6 +7,7 @@ readonly LIB_BASE_URL="https://api.brightdata.com/datasets/v3"
 readonly LIB_JOBS_DATASET_ID="gd_l4dx9j9sscpvs7no2"
 readonly LIB_CONFIG_DIR="${HOME}/.config/indeed-brightdata"
 readonly LIB_DATASETS_FILE="${LIB_CONFIG_DIR}/datasets.json"
+readonly LIB_PENDING_FILE="${LIB_CONFIG_DIR}/pending.json"
 
 # Global set by make_api_request for callers to inspect
 HTTP_CODE=""
@@ -128,4 +129,71 @@ extract_snapshot_id() {
     return 1
   fi
   echo "$snapshot_id"
+}
+
+# save_pending <snapshot_id> <description> <dataset_type> <script_name>
+# Appends a pending snapshot entry to pending.json. Atomic write via temp+mv.
+# Creates the file and config dir if they don't exist.
+# Skips if snapshot_id is already in pending.
+save_pending() {
+  local snapshot_id="$1"
+  local description="$2"
+  local dataset_type="$3"
+  local script_name="$4"
+
+  mkdir -p "$LIB_CONFIG_DIR"
+
+  local existing="[]"
+  if [[ -f "$LIB_PENDING_FILE" ]]; then
+    existing=$(cat "$LIB_PENDING_FILE")
+  fi
+
+  # Skip duplicate
+  if echo "$existing" | jq -e --arg id "$snapshot_id" 'any(.[]; .snapshot_id == $id)' >/dev/null 2>&1; then
+    return 0
+  fi
+
+  local tmp_file
+  tmp_file=$(mktemp "${LIB_CONFIG_DIR}/.pending_XXXXXX")
+
+  local triggered_at
+  triggered_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+  echo "$existing" | jq --arg sid "$snapshot_id" \
+    --arg desc "$description" \
+    --arg dtype "$dataset_type" \
+    --arg scr "$script_name" \
+    --arg ts "$triggered_at" \
+    '. + [{"snapshot_id": $sid, "description": $desc, "dataset_type": $dtype, "triggered_at": $ts, "script": $scr}]' \
+    > "$tmp_file"
+
+  mv -f "$tmp_file" "$LIB_PENDING_FILE"
+}
+
+# load_pending
+# Outputs pending.json contents to stdout. Returns empty array if file missing.
+load_pending() {
+  if [[ -f "$LIB_PENDING_FILE" ]]; then
+    cat "$LIB_PENDING_FILE"
+  else
+    echo "[]"
+  fi
+}
+
+# remove_pending <snapshot_id>
+# Removes a pending entry by snapshot_id. Atomic write.
+remove_pending() {
+  local snapshot_id="$1"
+
+  if [[ ! -f "$LIB_PENDING_FILE" ]]; then
+    return 0
+  fi
+
+  local tmp_file
+  tmp_file=$(mktemp "${LIB_CONFIG_DIR}/.pending_XXXXXX")
+
+  jq --arg id "$snapshot_id" '[.[] | select(.snapshot_id != $id)]' \
+    "$LIB_PENDING_FILE" > "$tmp_file"
+
+  mv -f "$tmp_file" "$LIB_PENDING_FILE"
 }

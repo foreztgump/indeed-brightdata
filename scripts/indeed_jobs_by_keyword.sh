@@ -29,6 +29,8 @@ Options:
   --pay RANGE          Filter by pay range
   --radius MILES       Location radius in miles
   --limit N            Max results to return
+  --limit-per-input N  Max results per input keyword
+  --no-wait            Fire-and-forget: trigger and exit immediately
   --help               Show this help message
 
 Output:
@@ -51,6 +53,8 @@ parse_args() {
   PAY=""
   RADIUS=""
   LIMIT=""
+  LIMIT_PER_INPUT=""
+  NO_WAIT=false
 
   local positional=0
   while [[ $# -gt 0 ]]; do
@@ -61,6 +65,8 @@ parse_args() {
       --pay) PAY="$2"; shift 2 ;;
       --radius) RADIUS="$2"; shift 2 ;;
       --limit) LIMIT="$2"; shift 2 ;;
+      --limit-per-input) LIMIT_PER_INPUT="$2"; shift 2 ;;
+      --no-wait) NO_WAIT=true; shift ;;
       -*)
         echo "Unknown option: $1" >&2; exit 1 ;;
       *)
@@ -114,6 +120,9 @@ trigger_discovery() {
   if [[ -n "$LIMIT" ]]; then
     endpoint="${endpoint}&limit_multiple_results=${LIMIT}"
   fi
+  if [[ -n "$LIMIT_PER_INPUT" ]]; then
+    endpoint="${endpoint}&limit_per_input=${LIMIT_PER_INPUT}"
+  fi
 
   local body
   body=$(make_api_request POST "$endpoint" "$payload")
@@ -123,8 +132,19 @@ trigger_discovery() {
   local snapshot_id
   snapshot_id=$(extract_snapshot_id "$body") || return 1
 
+  local description="${KEYWORD} jobs in ${LOCATION}, ${COUNTRY}"
+
+  if [[ "$NO_WAIT" == true ]]; then
+    save_pending "$snapshot_id" "$description" "jobs" "indeed_jobs_by_keyword.sh"
+    echo "Searching Indeed for \"${KEYWORD}\" in ${LOCATION}, ${COUNTRY}..." >&2
+    jq -n --arg sid "$snapshot_id" --arg desc "$description" \
+      '{"status":"pending","snapshot_id":$sid,"description":$desc}'
+    return 0
+  fi
+
   echo "Searching Indeed for \"${KEYWORD}\" in ${LOCATION}, ${COUNTRY}..." >&2
-  "${SCRIPT_DIR}/indeed_poll_and_fetch.sh" "$snapshot_id"
+  "${SCRIPT_DIR}/indeed_poll_and_fetch.sh" "$snapshot_id" \
+    --description "$description" --dataset-type "jobs"
 }
 
 main() {

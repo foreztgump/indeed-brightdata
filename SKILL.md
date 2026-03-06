@@ -8,7 +8,7 @@ description: >
   any Indeed-related recruiting research. Requires BRIGHTDATA_API_KEY env var.
   Supports: job search by keyword/location/URL, company lookup by URL/keyword/industry,
   batch collection with polling, and structured JSON output.
-version: 1.0.0
+version: 2.0.0
 license: MIT
 allowed-tools: Bash
 metadata: {"openclaw":{"requires":{"env":["BRIGHTDATA_API_KEY"],"bins":["curl","jq"]},"primaryEnv":"BRIGHTDATA_API_KEY"}}
@@ -40,16 +40,19 @@ scripts/indeed_jobs_by_url.sh "https://www.indeed.com/viewjob?jk=abc123"
 ```
 User request arrives
 ├── Contains an Indeed URL?
-│   ├── Job URL (/viewjob?) → indeed_jobs_by_url.sh
-│   ├── Company jobs URL (/cmp/*/jobs) → indeed_jobs_by_company.sh
-│   └── Company page URL (/cmp/*) → indeed_company_by_url.sh
+│   ├── Job URL (/viewjob?) → indeed_jobs_by_url.sh [SYNC — fast, seconds]
+│   ├── Company jobs URL (/cmp/*/jobs) → indeed_jobs_by_company.sh [ASYNC — minutes]
+│   └── Company page URL (/cmp/*) → indeed_company_by_url.sh [SYNC — fast, seconds]
 ├── Asking about jobs?
-│   └── Has keyword/location → indeed_jobs_by_keyword.sh
+│   └── Has keyword/location → indeed_jobs_by_keyword.sh [ASYNC — minutes]
 ├── Asking about companies?
-│   ├── Has keyword → indeed_company_by_keyword.sh
-│   └── Has industry + state → indeed_company_by_industry.sh
+│   ├── Has keyword → indeed_company_by_keyword.sh [ASYNC — minutes]
+│   └── Has industry + state → indeed_company_by_industry.sh [ASYNC — minutes]
+├── Check pending results → indeed_check_pending.sh
 └── "List available scrapers" → indeed_list_datasets.sh
 ```
+
+**IMPORTANT:** Always prefer sync (URL-based) scripts when the user provides a URL — they return in seconds. Async discovery scripts (keyword, industry) take 2–8 minutes. On messaging platforms, use `--no-wait` so the user isn't left waiting.
 
 ## Scripts Reference
 
@@ -62,30 +65,70 @@ User request arrives
 | `indeed_company_by_keyword.sh` | Discover companies by keyword | `indeed_company_by_keyword.sh "Tesla"` |
 | `indeed_company_by_industry.sh` | Discover companies by industry/state | `indeed_company_by_industry.sh "Technology" "Texas"` |
 | `indeed_poll_and_fetch.sh` | Poll async job and fetch results | `indeed_poll_and_fetch.sh <snapshot_id>` |
+| `indeed_check_pending.sh` | Check/fetch completed pending searches | `indeed_check_pending.sh` |
 | `indeed_list_datasets.sh` | List available Indeed dataset IDs | `indeed_list_datasets.sh` |
 
 ## Sync vs Async
 
-- **Sync** (`/scrape`): Use for collect-by-URL with ≤5 URLs. Returns data inline.
-- **Async** (`/trigger` + poll): Used automatically by discovery scripts (keyword, industry). Returns `snapshot_id`, then `indeed_poll_and_fetch.sh` polls until ready.
+- **Sync** (`/scrape`): Use for collect-by-URL with ≤5 URLs. Returns data in seconds. Always prefer this when the user provides a URL.
+- **Async** (`/trigger` + poll): Used by discovery scripts (keyword, industry). Takes 2–8 minutes.
 
-Discovery scripts handle async automatically — you don't need to call `indeed_poll_and_fetch.sh` manually unless you want to check a previous snapshot.
+### Fire-and-Forget Mode (Recommended for messaging platforms)
+
+Discovery scripts support `--no-wait` to trigger a search and return immediately:
+
+```bash
+scripts/indeed_jobs_by_keyword.sh "nurse" US "Ohio" --no-wait
+# Returns: {"status":"pending","snapshot_id":"s_abc123","description":"nurse jobs in Ohio, US"}
+```
+
+Tell the user: "I've kicked off a search for nurse jobs in Ohio — I'll check back for results shortly."
+
+Later, check for completed results:
+```bash
+scripts/indeed_check_pending.sh
+```
+
+### Exit Codes
+
+| Code | Meaning | Agent should... |
+|------|---------|-----------------|
+| 0 | Success — results on stdout | Summarize results for user |
+| 1 | Error — something failed | Report the error |
+| 2 | Deferred — still processing, saved to pending | Tell user "results are still processing, I'll follow up" |
+
+When a script exits with code 2, the snapshot has been saved to `~/.config/indeed-brightdata/pending.json`. Run `indeed_check_pending.sh` on your next opportunity to retrieve results.
 
 ## Output Handling
 
-All scripts output JSON to stdout. Parse with `jq`:
+All scripts output JSON to stdout. **Never dump raw JSON at the user.** Summarize results in a readable format.
 
-```bash
-# Get top 5 job titles and companies
-scripts/indeed_jobs_by_keyword.sh "engineer" US "Austin" | jq '.[0:5] | .[] | {title: .job_title, company: .company_name, salary: .salary_formatted}'
-```
+### Job Results — Show these fields:
+- **Title** (job_title)
+- **Company** (company_name)
+- **Location** (location)
+- **Salary** (salary_formatted) — if available
+- **Link** (url or apply_link)
 
-Summarize results for the user: title, company, salary, location, and apply link. Offer to show full details for specific listings.
+### Company Results — Show these fields:
+- **Name** (name)
+- **Rating** (overall rating) — if available
+- **Industry** (industry)
+- **HQ** (headquarters)
+- **Open Jobs** (jobs_count)
+
+### Formatting Rules:
+- Show **max 5 results** in the initial summary
+- End with "Want to see more?" if there are additional results
+- Use a clean list or table format
+- Include direct links so the user can click through
 
 ## Options
 
-Most scripts support these flags:
-- `--limit N` — Max results to return
+All discovery scripts support:
+- `--limit N` — Max total results to return
+- `--limit-per-input N` — Max results per input (reduces processing time)
+- `--no-wait` — Fire-and-forget mode (trigger and exit immediately)
 - `--help` — Show usage information
 
 Job keyword search also supports:
@@ -93,6 +136,8 @@ Job keyword search also supports:
 - `--date-posted "Last 24 hours"` — Filter by recency
 - `--pay RANGE` — Filter by pay range
 - `--radius MILES` — Location radius
+
+**Tip:** Use `--limit-per-input 10` to speed up discovery queries. Fewer results = faster Bright Data processing.
 
 ## Full API Reference
 

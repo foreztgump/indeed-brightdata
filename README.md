@@ -102,6 +102,10 @@ npx add-skill foreztgump/indeed-brightdata
 ```bash
 scripts/indeed_jobs_by_keyword.sh "software engineer" US "Austin, TX"
 scripts/indeed_jobs_by_keyword.sh "nurse" US "Ohio" --date-posted "Last 24 hours" --limit 20
+
+# Fire-and-forget (returns immediately, check later):
+scripts/indeed_jobs_by_keyword.sh "nurse" US "Ohio" --no-wait
+scripts/indeed_check_pending.sh
 ```
 
 ### Job Details by URL
@@ -135,6 +139,7 @@ scripts/indeed_jobs_by_company.sh "https://www.indeed.com/cmp/Google/jobs"
 | `indeed_company_by_keyword.sh` | Search companies by keyword |
 | `indeed_company_by_industry.sh` | Discover companies by industry/state |
 | `indeed_poll_and_fetch.sh` | Poll async results and fetch data |
+| `indeed_check_pending.sh` | Check/fetch completed pending searches |
 | `indeed_list_datasets.sh` | List/save available dataset IDs |
 
 All scripts support `--help` for detailed usage.
