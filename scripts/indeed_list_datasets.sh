@@ -6,11 +6,10 @@
 
 set -euo pipefail
 
-readonly API_KEY="${BRIGHTDATA_API_KEY:?Set BRIGHTDATA_API_KEY}"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/_lib.sh"
+
 readonly LIST_URL="https://api.brightdata.com/datasets/list"
-readonly CONFIG_DIR="${HOME}/.config/indeed-brightdata"
-readonly DATASETS_FILE="${CONFIG_DIR}/datasets.json"
-readonly KNOWN_JOBS_ID="gd_l4dx9j9sscpvs7no2"
 
 show_help() {
   cat >&2 <<'EOF'
@@ -46,17 +45,10 @@ parse_args() {
 }
 
 fetch_datasets() {
-  local response http_code body
-  response=$(curl -s -w "\n%{http_code}" \
-    -H "Authorization: Bearer ${API_KEY}" \
-    "$LIST_URL")
-  http_code=$(echo "$response" | tail -1)
-  body=$(echo "$response" | sed '$d')
-
-  if [[ "$http_code" -ne 200 ]]; then
-    echo "Error: failed to list datasets (HTTP ${http_code}): ${body}" >&2
-    return 1
-  fi
+  local body
+  body=$(make_api_request GET "$LIST_URL")
+  _read_http_code
+  check_http_status "$HTTP_CODE" "$body" "list datasets" || return 1
 
   echo "$body"
 }
@@ -69,23 +61,23 @@ filter_indeed_datasets() {
 
 save_config() {
   local datasets="$1"
-  mkdir -p "$CONFIG_DIR"
+  mkdir -p "$LIB_CONFIG_DIR"
 
   # Extract company dataset ID (not the known jobs one)
   local company_id
   company_id=$(echo "$datasets" | jq -r \
-    --arg jobs_id "$KNOWN_JOBS_ID" \
+    --arg jobs_id "$LIB_JOBS_DATASET_ID" \
     '[.[] | select(.id != $jobs_id)] | .[0].id // empty')
 
   local config
   config=$(jq -n \
-    --arg jobs "$KNOWN_JOBS_ID" \
+    --arg jobs "$LIB_JOBS_DATASET_ID" \
     --arg company "$company_id" \
     '{jobs: $jobs, company: $company}')
 
-  echo "$config" > "$DATASETS_FILE"
-  echo "Saved dataset IDs to ${DATASETS_FILE}" >&2
-  echo "  Jobs: ${KNOWN_JOBS_ID}" >&2
+  echo "$config" > "$LIB_DATASETS_FILE"
+  echo "Saved dataset IDs to ${LIB_DATASETS_FILE}" >&2
+  echo "  Jobs: ${LIB_JOBS_DATASET_ID}" >&2
   echo "  Company: ${company_id:-not found}" >&2
 }
 
