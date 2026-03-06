@@ -10,7 +10,7 @@ Search and scrape Indeed job listings and company information using Bright Data'
 | Claude Desktop | ZIP upload | No (re-package) |
 | Cursor | Symlink | Yes (git pull) |
 | Codex | Symlink | Yes (git pull) |
-| OpenClaw | Config command | Yes (git pull) |
+| OpenClaw | Symlink | Yes (git pull) |
 
 ## Quick Start
 
@@ -74,14 +74,12 @@ cd indeed-brightdata
 ### OpenClaw
 
 ```bash
-# Register the skill path
-openclaw config set skills.indeed-brightdata.path /path/to/indeed-brightdata
-
-# Set your API key
-openclaw config set skills.entries.indeed-brightdata.env.BRIGHTDATA_API_KEY "your-api-key"
+git clone https://github.com/foreztgump/indeed-brightdata.git
+cd indeed-brightdata
+./install.sh --platform openclaw
 ```
 
-Or use the install script: `./install.sh --platform openclaw`
+This creates a symlink at `~/.openclaw/skills/indeed-brightdata`.
 
 ### All Platforms at Once
 

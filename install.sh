@@ -7,7 +7,7 @@ set -euo pipefail
 readonly SKILL_NAME="indeed-brightdata"
 readonly REQUIRED_BINS=("curl" "jq")
 readonly MIN_BASH_VERSION=4
-readonly SYMLINK_PLATFORMS=("claude-code" "cursor" "codex")
+readonly SYMLINK_PLATFORMS=("claude-code" "cursor" "codex" "openclaw")
 
 PROJECT_ROOT=""
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -22,6 +22,7 @@ init_platform_dirs() {
     [claude-code]="${HOME}/.claude/skills"
     [cursor]="${HOME}/.cursor/skills"
     [codex]="${HOME}/.codex/skills"
+    [openclaw]="${HOME}/.openclaw/skills"
   )
 }
 
@@ -35,7 +36,7 @@ Options:
   --help                Show this help message and exit
   --platform <name>     Install for a specific platform
                         Platforms: claude-code, cursor, codex, openclaw, claude-desktop
-  --all                 Install for all symlink platforms and print openclaw instructions
+  --all                 Install for all platforms
   --force               Overwrite existing installation
 
 Examples:
@@ -95,16 +96,6 @@ install_symlink() {
   echo "Installed $SKILL_NAME for $platform_name at $install_path" >&2
 }
 
-install_openclaw() {
-  cat >&2 <<EOF
-OpenClaw installation:
-  openclaw config set skills.$SKILL_NAME.path "$PROJECT_ROOT"
-
-Then verify with:
-  openclaw skill list
-EOF
-}
-
 install_desktop() {
   local package_script="$PROJECT_ROOT/scripts/package.sh"
   if [[ ! -x "$package_script" ]]; then
@@ -119,11 +110,6 @@ install_desktop() {
 
 install_platform() {
   local platform="$1"
-
-  if [[ "$platform" == "openclaw" ]]; then
-    install_openclaw
-    return 0
-  fi
 
   if [[ "$platform" == "claude-desktop" ]]; then
     install_desktop
@@ -143,8 +129,6 @@ install_all() {
   for platform in "${SYMLINK_PLATFORMS[@]}"; do
     install_symlink "$platform" "${PLATFORM_DIRS[$platform]}"
   done
-  echo "" >&2
-  install_openclaw
   echo "" >&2
   install_desktop
 }

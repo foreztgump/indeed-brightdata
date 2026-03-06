@@ -5,7 +5,6 @@ openspec/
 CODE_PRINCIPLES.md
 CLAUDE.md
 docs/
-tests/
 
 # Environment
 .env
