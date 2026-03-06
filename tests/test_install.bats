@@ -98,3 +98,16 @@ teardown() {
   [[ "$output" == *"Upload"* ]]
   rm -f "$PROJECT_ROOT/indeed-brightdata.zip"
 }
+
+@test "install.sh warns when API key is not set" {
+  unset BRIGHTDATA_API_KEY
+  run "$PROJECT_ROOT/install.sh" --platform claude-code
+  [[ "$output" == *"BRIGHTDATA_API_KEY is not set"* ]]
+}
+
+@test "install.sh --all includes claude-desktop ZIP" {
+  run "$PROJECT_ROOT/install.sh" --all
+  [[ "$status" -eq 0 ]]
+  [[ "$output" == *"Upload"* ]]
+  rm -f "$PROJECT_ROOT/indeed-brightdata.zip"
+}

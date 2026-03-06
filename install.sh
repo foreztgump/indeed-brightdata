@@ -82,8 +82,13 @@ install_symlink() {
     return 0
   fi
 
-  if [[ -e "$install_path" ]]; then
+  if [[ -L "$install_path" ]]; then
+    rm -f "$install_path"
+  elif [[ -d "$install_path" ]]; then
+    echo "Warning: replacing directory at $install_path" >&2
     rm -rf "$install_path"
+  elif [[ -e "$install_path" ]]; then
+    rm -f "$install_path"
   fi
 
   mkdir -p "$target_dir"
@@ -141,6 +146,8 @@ install_all() {
   done
   echo "" >&2
   install_openclaw
+  echo "" >&2
+  install_desktop
 }
 
 main() {

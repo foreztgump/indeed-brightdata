@@ -19,3 +19,11 @@
 @test "SKILL.md preserves OpenClaw metadata" {
   head -20 "$BATS_TEST_DIRNAME/../SKILL.md" | grep -q "metadata:"
 }
+
+@test "plugin.json version matches SKILL.md version" {
+  local skill_version
+  local plugin_version
+  skill_version=$(grep "^version:" "$BATS_TEST_DIRNAME/../SKILL.md" | awk '{print $2}')
+  plugin_version=$(jq -r '.version' "$BATS_TEST_DIRNAME/../.claude-plugin/plugin.json")
+  [[ "$skill_version" == "$plugin_version" ]]
+}
