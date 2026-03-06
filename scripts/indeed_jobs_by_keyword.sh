@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+# Usage: indeed_jobs_by_keyword.sh <keyword> <country> <location> [OPTIONS]
+# Discover jobs by keyword search (async).
+# Env: BRIGHTDATA_API_KEY (required)
+# Output: JSON to stdout
+
+set -euo pipefail
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly API_KEY="${BRIGHTDATA_API_KEY:?Set BRIGHTDATA_API_KEY}"
+readonly DATASET_ID="gd_l4dx9j9sscpvs7no2"
+readonly BASE_URL="https://api.brightdata.com/datasets/v3"
+readonly DEFAULT_DOMAIN="indeed.com"
+
+show_help() {
+  cat >&2 <<'EOF'
+Usage: indeed_jobs_by_keyword.sh <keyword> <country> <location> [OPTIONS]
+
+Discover job listings by keyword search on Indeed.
+
+Arguments:
+  keyword              Search keyword (e.g., "software engineer")
+  country              Country code (e.g., US, GB, CA)
+  location             Location string (e.g., "Austin, TX")
+
+Options:
+  --domain DOMAIN      Indeed domain (default: indeed.com)
+  --date-posted VAL    Filter: "Last 24 hours", "Last 3 days", "Last 7 days", "Last 14 days"
+  --pay RANGE          Filter by pay range
+  --radius MILES       Location radius in miles
+  --limit N            Max results to return
+  --help               Show this help message
+
+Output:
+  JSON array to stdout
+
+Examples:
+  indeed_jobs_by_keyword.sh "nurse" US "Ohio"
+  indeed_jobs_by_keyword.sh "software engineer" US "Austin, TX" --date-posted "Last 7 days"
+  indeed_jobs_by_keyword.sh "warehouse" US "Dallas, TX" --limit 20
+EOF
+  exit 0
+}
+
+parse_args() {
+  KEYWORD=""
+  COUNTRY=""
+  LOCATION=""
+  DOMAIN="$DEFAULT_DOMAIN"
+  DATE_POSTED=""
+  PAY=""
+  RADIUS=""
+  LIMIT=""
+
+  local positional=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --help) show_help ;;
+      --domain) DOMAIN="$2"; shift 2 ;;
+      --date-posted) DATE_POSTED="$2"; shift 2 ;;
+      --pay) PAY="$2"; shift 2 ;;
+      --radius) RADIUS="$2"; shift 2 ;;
+      --limit) LIMIT="$2"; shift 2 ;;
+      -*)
+        echo "Unknown option: $1" >&2; exit 1 ;;
+      *)
+        case $positional in
+          0) KEYWORD="$1" ;;
+          1) COUNTRY="$1" ;;
+          2) LOCATION="$1" ;;
+          *) echo "Error: unexpected argument: $1" >&2; exit 1 ;;
+        esac
+        positional=$((positional + 1))
+        shift
+        ;;
+    esac
+  done
+
+  if [[ -z "$KEYWORD" || -z "$COUNTRY" || -z "$LOCATION" ]]; then
+    echo "Error: keyword, country, and location are required" >&2
+    echo "Run with --help for usage" >&2
+    exit 1
+  fi
+}
+
+build_payload() {
+  local payload
+  payload=$(jq -n \
+    --arg kw "$KEYWORD" \
+    --arg co "$COUNTRY" \
+    --arg dom "$DOMAIN" \
+    --arg loc "$LOCATION" \
+    '[{keyword_search: $kw, country: $co, domain: $dom, location: $loc}]')
+
+  # Add optional fields
+  if [[ -n "$DATE_POSTED" ]]; then
+    payload=$(echo "$payload" | jq --arg v "$DATE_POSTED" '.[0].date_posted = $v')
+  fi
+  if [[ -n "$PAY" ]]; then
+    payload=$(echo "$payload" | jq --arg v "$PAY" '.[0].pay = $v')
+  fi
+  if [[ -n "$RADIUS" ]]; then
+    payload=$(echo "$payload" | jq --arg v "$RADIUS" '.[0].location_radius = $v')
+  fi
+
+  echo "$payload"
+}
+
+trigger_discovery() {
+  local payload="$1"
+  local endpoint="${BASE_URL}/trigger?dataset_id=${DATASET_ID}&type=discover_new&discover_by=keyword"
+  if [[ -n "$LIMIT" ]]; then
+    endpoint="${endpoint}&limit_multiple_results=${LIMIT}"
+  fi
+
+  local response http_code body
+  response=$(curl -s -w "\n%{http_code}" \
+    -X POST \
+    -H "Authorization: Bearer ${API_KEY}" \
+    -H "Content-Type: application/json" \
+    -d "$payload" \
+    "$endpoint")
+  http_code=$(echo "$response" | tail -1)
+  body=$(echo "$response" | sed '$d')
+
+  if [[ "$http_code" -eq 429 ]]; then
+    echo "Error: rate limit exceeded (HTTP 429). Try again later." >&2
+    return 1
+  fi
+
+  if [[ "$http_code" -ne 200 ]]; then
+    echo "Error: trigger failed (HTTP ${http_code}): ${body}" >&2
+    return 1
+  fi
+
+  local snapshot_id
+  snapshot_id=$(echo "$body" | jq -r '.snapshot_id // empty')
+  if [[ -z "$snapshot_id" ]]; then
+    echo "Error: no snapshot_id in response: ${body}" >&2
+    return 1
+  fi
+
+  echo "Searching Indeed for \"${KEYWORD}\" in ${LOCATION}, ${COUNTRY}..." >&2
+  "${SCRIPT_DIR}/indeed_poll_and_fetch.sh" "$snapshot_id"
+}
+
+main() {
+  parse_args "$@"
+  local payload
+  payload=$(build_payload)
+  trigger_discovery "$payload"
+}
+
+main "$@"
