@@ -27,7 +27,8 @@ Options:
   --help               Show this help message
 
 Output:
-  JSON array to stdout
+  Default: JSON array to stdout
+  With --no-wait: JSON object {"status","snapshot_id","description"}
 
 Note:
   Requires company dataset ID. Run indeed_list_datasets.sh first if not configured.

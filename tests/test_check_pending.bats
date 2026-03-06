@@ -35,6 +35,10 @@ teardown() {
   run "$PROJECT_ROOT/scripts/indeed_check_pending.sh"
   [[ "$status" -eq 0 ]]
   [[ "$output" == *"Engineer"* ]]
+
+  local count
+  count=$(jq 'length' "$HOME/.config/indeed-brightdata/pending.json")
+  [[ "$count" -eq 0 ]]
 }
 
 @test "indeed_check_pending.sh exits 2 when all still running" {
@@ -47,6 +51,10 @@ teardown() {
   run "$PROJECT_ROOT/scripts/indeed_check_pending.sh"
   [[ "$status" -eq 2 ]]
   [[ "$output" == *"Still running"* ]]
+
+  local count
+  count=$(jq 'length' "$HOME/.config/indeed-brightdata/pending.json")
+  [[ "$count" -eq 1 ]]
 }
 
 @test "indeed_check_pending.sh removes failed snapshots" {

@@ -34,7 +34,8 @@ Options:
   --help               Show this help message
 
 Output:
-  JSON array to stdout
+  Default: JSON array to stdout
+  With --no-wait: JSON object {"status","snapshot_id","description"}
 
 Examples:
   indeed_jobs_by_keyword.sh "nurse" US "Ohio"

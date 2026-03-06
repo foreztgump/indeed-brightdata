@@ -26,7 +26,8 @@ Options:
   --help               Show this help message
 
 Output:
-  JSON array to stdout
+  Default: JSON array to stdout
+  With --no-wait: JSON object {"status","snapshot_id","description"}
 EOF
   exit 0
 }
