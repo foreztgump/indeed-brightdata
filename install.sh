@@ -35,7 +35,7 @@ Install the $SKILL_NAME skill for AI coding platforms.
 Options:
   --help                Show this help message and exit
   --platform <name>     Install for a specific platform
-                        Platforms: claude-code, cursor, codex, openclaw
+                        Platforms: claude-code, cursor, codex, openclaw, claude-desktop
   --all                 Install for all symlink platforms and print openclaw instructions
   --force               Overwrite existing installation
 
@@ -101,6 +101,18 @@ Then verify with:
 EOF
 }
 
+install_desktop() {
+  local package_script="$PROJECT_ROOT/scripts/package.sh"
+  if [[ ! -x "$package_script" ]]; then
+    echo "Error: scripts/package.sh not found or not executable." >&2
+    return 1
+  fi
+  "$package_script"
+  echo "" >&2
+  echo "Upload indeed-brightdata.zip via Claude Desktop:" >&2
+  echo "  Settings > Features > Skills > Upload skill" >&2
+}
+
 install_platform() {
   local platform="$1"
 
@@ -109,9 +121,14 @@ install_platform() {
     return 0
   fi
 
+  if [[ "$platform" == "claude-desktop" ]]; then
+    install_desktop
+    return 0
+  fi
+
   if [[ -z "${PLATFORM_DIRS[$platform]+x}" ]]; then
     echo "Error: unknown platform '$platform'." >&2
-    echo "Supported platforms: ${SYMLINK_PLATFORMS[*]}, openclaw" >&2
+    echo "Supported platforms: ${SYMLINK_PLATFORMS[*]}, openclaw, claude-desktop" >&2
     return 1
   fi
 

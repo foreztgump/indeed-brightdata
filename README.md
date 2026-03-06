@@ -74,8 +74,14 @@ cd indeed-brightdata
 ### OpenClaw
 
 ```bash
+# Register the skill path
+openclaw config set skills.indeed-brightdata.path /path/to/indeed-brightdata
+
+# Set your API key
 openclaw config set skills.entries.indeed-brightdata.env.BRIGHTDATA_API_KEY "your-api-key"
 ```
+
+Or use the install script: `./install.sh --platform openclaw`
 
 ### All Platforms at Once
 
@@ -83,7 +89,9 @@ openclaw config set skills.entries.indeed-brightdata.env.BRIGHTDATA_API_KEY "you
 ./install.sh --all
 ```
 
-### Universal CLI
+### Universal CLI (Community)
+
+If you use the [add-skill](https://add-skill.org) CLI:
 
 ```bash
 npx add-skill foreztgump/indeed-brightdata

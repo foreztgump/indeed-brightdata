@@ -85,3 +85,16 @@ teardown() {
   run "$PROJECT_ROOT/install.sh" --platform claude-code
   [[ "$output" == *"API key detected"* ]]
 }
+
+@test "install.sh rejects unknown platform" {
+  run "$PROJECT_ROOT/install.sh" --platform nonexistent
+  [[ "$status" -eq 1 ]]
+  [[ "$output" == *"unknown platform"* ]]
+}
+
+@test "install.sh claude-desktop builds ZIP" {
+  run "$PROJECT_ROOT/install.sh" --platform claude-desktop
+  [[ "$status" -eq 0 ]]
+  [[ "$output" == *"Upload"* ]]
+  rm -f "$PROJECT_ROOT/indeed-brightdata.zip"
+}
