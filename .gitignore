@@ -4,6 +4,8 @@ openspec/
 .coderabbit.yaml
 CODE_PRINCIPLES.md
 CLAUDE.md
+docs/
+tests/
 
 # Environment
 .env
