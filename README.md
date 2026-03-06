@@ -1,29 +1,92 @@
 # indeed-brightdata
 
-OpenClaw skill for searching and scraping Indeed job listings and company information using Bright Data's Web Scraper API.
+Search and scrape Indeed job listings and company information using Bright Data's Web Scraper API. Works with Claude Code, Claude Desktop, Cursor, Codex, OpenClaw, and any agent supporting the [Agent Skills](https://agentskills.io) standard.
 
-## What It Does
+## Compatibility
 
-- Search Indeed for jobs by keyword, location, and filters
-- Collect detailed job listing data from Indeed URLs
-- Look up company information, ratings, and reviews
-- Discover companies by industry and state
-- All output as structured JSON for agent consumption
+| Platform | Install Method | Auto-Update |
+|----------|---------------|-------------|
+| Claude Code | Symlink or Plugin Marketplace | Yes (git pull) |
+| Claude Desktop | ZIP upload | No (re-package) |
+| Cursor | Symlink | Yes (git pull) |
+| Codex | Symlink | Yes (git pull) |
+| OpenClaw | Config command | Yes (git pull) |
+
+## Quick Start
+
+```bash
+git clone https://github.com/foreztgump/indeed-brightdata.git
+cd indeed-brightdata
+./install.sh --platform claude-code
+```
 
 ## Prerequisites
 
 - `curl` and `jq` installed
+- Bash 4.0+
 - A [Bright Data](https://brightdata.com) account with Indeed scraper access
 - `BRIGHTDATA_API_KEY` environment variable set
 
-## Setup
+## Installation
+
+### Claude Code (Recommended)
+
+**Option A --- Install script:**
 
 ```bash
-# Set your API key
-export BRIGHTDATA_API_KEY="your-api-key-here"
+git clone https://github.com/foreztgump/indeed-brightdata.git
+cd indeed-brightdata
+./install.sh --platform claude-code
+```
 
-# Discover and save dataset IDs (required for company endpoints)
-scripts/indeed_list_datasets.sh --save
+**Option B --- Plugin marketplace:**
+
+```
+/plugin marketplace add foreztgump/indeed-brightdata
+```
+
+### Claude Desktop
+
+```bash
+git clone https://github.com/foreztgump/indeed-brightdata.git
+cd indeed-brightdata
+make package
+```
+
+Then upload `indeed-brightdata.zip` via **Settings > Features > Skills > Upload skill** in Claude Desktop.
+
+### Cursor
+
+```bash
+git clone https://github.com/foreztgump/indeed-brightdata.git
+cd indeed-brightdata
+./install.sh --platform cursor
+```
+
+### Codex
+
+```bash
+git clone https://github.com/foreztgump/indeed-brightdata.git
+cd indeed-brightdata
+./install.sh --platform codex
+```
+
+### OpenClaw
+
+```bash
+openclaw config set skills.entries.indeed-brightdata.env.BRIGHTDATA_API_KEY "your-api-key"
+```
+
+### All Platforms at Once
+
+```bash
+./install.sh --all
+```
+
+### Universal CLI
+
+```bash
+npx add-skill foreztgump/indeed-brightdata
 ```
 
 ## Usage
@@ -70,12 +133,12 @@ scripts/indeed_jobs_by_company.sh "https://www.indeed.com/cmp/Google/jobs"
 
 All scripts support `--help` for detailed usage.
 
-## OpenClaw Integration
-
-Add to your OpenClaw config:
+## Development
 
 ```bash
-openclaw config set skills.entries.indeed-brightdata.env.BRIGHTDATA_API_KEY "your-api-key"
+make test      # Run all tests
+make package   # Build ZIP for Claude Desktop
+make help      # Show all targets
 ```
 
 ## License
