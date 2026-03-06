@@ -40,7 +40,10 @@ check_stale() {
   local now_epoch
   now_epoch=$(date -u +%s)
   local entry_epoch
-  entry_epoch=$(date -u -d "$triggered_at" +%s 2>/dev/null || echo "0")
+  # GNU date -d, then BSD date -jf, then fallback to 0
+  entry_epoch=$(date -u -d "$triggered_at" +%s 2>/dev/null || \
+                date -u -jf "%Y-%m-%dT%H:%M:%S" "${triggered_at%%Z*}" +%s 2>/dev/null || \
+                echo "0")
   local age_hours=$(( (now_epoch - entry_epoch) / 3600 ))
 
   if [[ "$age_hours" -ge "$STALE_THRESHOLD_HOURS" ]]; then

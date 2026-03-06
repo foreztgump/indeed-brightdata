@@ -43,8 +43,10 @@ parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --help) show_help ;;
-      --limit) LIMIT="$2"; shift 2 ;;
-      --limit-per-input) LIMIT_PER_INPUT="$2"; shift 2 ;;
+      --limit|--limit-per-input)
+        [[ -n "${2:-}" ]] || { echo "Error: $1 requires a value" >&2; exit 1; }
+        case "$1" in --limit) LIMIT="$2" ;; --limit-per-input) LIMIT_PER_INPUT="$2" ;; esac
+        shift 2 ;;
       --no-wait) NO_WAIT=true; shift ;;
       -*) echo "Unknown option: $1" >&2; exit 1 ;;
       *) KEYWORD="$1"; shift ;;

@@ -60,12 +60,17 @@ parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --help) show_help ;;
-      --domain) DOMAIN="$2"; shift 2 ;;
-      --date-posted) DATE_POSTED="$2"; shift 2 ;;
-      --pay) PAY="$2"; shift 2 ;;
-      --radius) RADIUS="$2"; shift 2 ;;
-      --limit) LIMIT="$2"; shift 2 ;;
-      --limit-per-input) LIMIT_PER_INPUT="$2"; shift 2 ;;
+      --domain|--date-posted|--pay|--radius|--limit|--limit-per-input)
+        [[ -n "${2:-}" ]] || { echo "Error: $1 requires a value" >&2; exit 1; }
+        case "$1" in
+          --domain) DOMAIN="$2" ;;
+          --date-posted) DATE_POSTED="$2" ;;
+          --pay) PAY="$2" ;;
+          --radius) RADIUS="$2" ;;
+          --limit) LIMIT="$2" ;;
+          --limit-per-input) LIMIT_PER_INPUT="$2" ;;
+        esac
+        shift 2 ;;
       --no-wait) NO_WAIT=true; shift ;;
       -*)
         echo "Unknown option: $1" >&2; exit 1 ;;
