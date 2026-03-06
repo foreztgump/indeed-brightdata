@@ -6,8 +6,9 @@
 
 set -euo pipefail
 
-readonly API_KEY="${BRIGHTDATA_API_KEY:?Set BRIGHTDATA_API_KEY}"
-readonly BASE_URL="https://api.brightdata.com/datasets/v3"
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/_lib.sh"
+
 readonly DEFAULT_TIMEOUT=300
 readonly DEFAULT_INTERVAL=10
 
@@ -54,33 +55,19 @@ parse_args() {
 }
 
 poll_status() {
-  local response http_code body
-  response=$(curl -s -w "\n%{http_code}" \
-    -H "Authorization: Bearer ${API_KEY}" \
-    "${BASE_URL}/progress/${SNAPSHOT_ID}")
-  http_code=$(echo "$response" | tail -1)
-  body=$(echo "$response" | sed '$d')
-
-  if [[ "$http_code" -ne 200 ]]; then
-    echo "Error: progress check failed (HTTP ${http_code}): ${body}" >&2
-    return 1
-  fi
+  local body
+  body=$(make_api_request GET "${LIB_BASE_URL}/progress/${SNAPSHOT_ID}")
+  _read_http_code
+  check_http_status "$HTTP_CODE" "$body" "progress check" || return 1
 
   echo "$body" | jq -r '.status // "unknown"'
 }
 
 fetch_snapshot() {
-  local response http_code body
-  response=$(curl -s -w "\n%{http_code}" \
-    -H "Authorization: Bearer ${API_KEY}" \
-    "${BASE_URL}/snapshot/${SNAPSHOT_ID}?format=json")
-  http_code=$(echo "$response" | tail -1)
-  body=$(echo "$response" | sed '$d')
-
-  if [[ "$http_code" -ne 200 ]]; then
-    echo "Error: snapshot fetch failed (HTTP ${http_code}): ${body}" >&2
-    return 1
-  fi
+  local body
+  body=$(make_api_request GET "${LIB_BASE_URL}/snapshot/${SNAPSHOT_ID}?format=json")
+  _read_http_code
+  check_http_status "$HTTP_CODE" "$body" "snapshot fetch" || return 1
 
   echo "$body"
 }
