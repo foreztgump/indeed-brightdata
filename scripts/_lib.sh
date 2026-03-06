@@ -2,7 +2,7 @@
 # scripts/_lib.sh — shared functions for Indeed Bright Data scripts
 # Source this file: source "${SCRIPT_DIR}/_lib.sh"
 
-# shellcheck disable=SC2034 — these constants are used by scripts that source this file
+# shellcheck disable=SC2034
 readonly LIB_BASE_URL="https://api.brightdata.com/datasets/v3"
 readonly LIB_JOBS_DATASET_ID="gd_l4dx9j9sscpvs7no2"
 readonly LIB_CONFIG_DIR="${HOME}/.config/indeed-brightdata"
@@ -11,8 +11,10 @@ readonly LIB_DATASETS_FILE="${LIB_CONFIG_DIR}/datasets.json"
 # Global set by make_api_request for callers to inspect
 HTTP_CODE=""
 
-# File used to persist HTTP_CODE across subshells
-_LIB_HTTP_CODE_FILE="${TMPDIR:-/tmp}/.brightdata_http_code_$$"
+# File used to persist HTTP_CODE across subshells (single-threaded only —
+# concurrent calls within the same script will clobber this file)
+_LIB_HTTP_CODE_FILE="$(mktemp "${TMPDIR:-/tmp}/.brightdata_http_code_XXXXXX")"
+trap 'rm -f "$_LIB_HTTP_CODE_FILE"' EXIT
 
 # make_api_request <method> <endpoint> [payload]
 # Makes an authenticated API request to Bright Data.
@@ -56,6 +58,11 @@ check_http_status() {
   local http_code="$1"
   local body="$2"
   local action="$3"
+
+  if ! [[ "$http_code" =~ ^[0-9]+$ ]]; then
+    echo "Error: ${action} failed (invalid HTTP response)" >&2
+    return 1
+  fi
 
   if [[ "$http_code" -eq 200 ]]; then
     return 0
