@@ -2,6 +2,7 @@
 # scripts/_lib.sh — shared functions for Indeed Bright Data scripts
 # Source this file: source "${SCRIPT_DIR}/_lib.sh"
 
+# shellcheck disable=SC2034 — these constants are used by scripts that source this file
 readonly LIB_BASE_URL="https://api.brightdata.com/datasets/v3"
 readonly LIB_JOBS_DATASET_ID="gd_l4dx9j9sscpvs7no2"
 readonly LIB_CONFIG_DIR="${HOME}/.config/indeed-brightdata"
