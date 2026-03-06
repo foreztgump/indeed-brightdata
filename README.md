@@ -41,7 +41,7 @@ cd indeed-brightdata
 
 **Option B --- Plugin marketplace:**
 
-```
+```bash
 /plugin marketplace add foreztgump/indeed-brightdata
 ```
 

@@ -44,7 +44,7 @@ teardown() {
 @test "package.sh ZIP excludes tests directory" {
   "$PROJECT_ROOT/scripts/package.sh"
   run unzip -l "$PROJECT_ROOT/indeed-brightdata.zip"
-  [[ "$output" != *"/tests/"* ]]
+  [[ "$output" != *"tests/"* ]]
 }
 
 @test "package.sh prints success message" {

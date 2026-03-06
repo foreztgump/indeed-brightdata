@@ -1,7 +1,6 @@
 # Private docs and specs
 openspec/
-.claude/settings/
-.claude/skills/
+.claude/
 .coderabbit.yaml
 CODE_PRINCIPLES.md
 CLAUDE.md

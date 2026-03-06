@@ -15,10 +15,9 @@ readonly PROJECT_ROOT
 
 FORCE=false
 
-# Platform directory map (populated in main, after HOME is resolved)
-declare -A PLATFORM_DIRS
-
+# Platform directory map (populated in init_platform_dirs, after bash 4+ check)
 init_platform_dirs() {
+  declare -gA PLATFORM_DIRS
   PLATFORM_DIRS=(
     [claude-code]="${HOME}/.claude/skills"
     [cursor]="${HOME}/.cursor/skills"
