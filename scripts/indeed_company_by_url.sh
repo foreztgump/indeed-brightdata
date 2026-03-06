@@ -7,10 +7,8 @@
 set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly API_KEY="${BRIGHTDATA_API_KEY:?Set BRIGHTDATA_API_KEY}"
-readonly BASE_URL="https://api.brightdata.com/datasets/v3"
-readonly CONFIG_DIR="${HOME}/.config/indeed-brightdata"
-readonly DATASETS_FILE="${CONFIG_DIR}/datasets.json"
+source "${SCRIPT_DIR}/_lib.sh"
+
 readonly MAX_SYNC_URLS=5
 
 show_help() {
@@ -33,20 +31,6 @@ Note:
   Requires company dataset ID. Run indeed_list_datasets.sh first if not configured.
 EOF
   exit 0
-}
-
-get_company_dataset_id() {
-  if [[ -f "$DATASETS_FILE" ]]; then
-    local id
-    id=$(jq -r '.company // empty' "$DATASETS_FILE")
-    if [[ -n "$id" ]]; then
-      echo "$id"
-      return 0
-    fi
-  fi
-  echo "Error: company dataset ID not configured." >&2
-  echo "Run indeed_list_datasets.sh to discover and store dataset IDs." >&2
-  return 1
 }
 
 parse_args() {
@@ -81,44 +65,30 @@ main() {
   parse_args "$@"
 
   local dataset_id
-  dataset_id=$(get_company_dataset_id) || exit 1
+  dataset_id=$(get_dataset_id company) || exit 1
 
   local payload
   payload=$(build_payload)
 
   local endpoint
   if [[ ${#URLS[@]} -le $MAX_SYNC_URLS ]]; then
-    endpoint="${BASE_URL}/scrape?dataset_id=${dataset_id}"
+    endpoint="${LIB_BASE_URL}/scrape?dataset_id=${dataset_id}"
   else
-    endpoint="${BASE_URL}/trigger?dataset_id=${dataset_id}"
+    endpoint="${LIB_BASE_URL}/trigger?dataset_id=${dataset_id}"
   fi
   if [[ -n "$LIMIT" ]]; then
     endpoint="${endpoint}&limit_per_input=${LIMIT}"
   fi
 
-  local response http_code body
-  response=$(curl -s -w "\n%{http_code}" \
-    -X POST \
-    -H "Authorization: Bearer ${API_KEY}" \
-    -H "Content-Type: application/json" \
-    -d "$payload" \
-    "$endpoint")
-  http_code=$(echo "$response" | tail -1)
-  body=$(echo "$response" | sed '$d')
-
-  if [[ "$http_code" -ne 200 ]]; then
-    echo "Error: request failed (HTTP ${http_code}): ${body}" >&2
-    return 1
-  fi
+  local body
+  body=$(make_api_request POST "$endpoint" "$payload")
+  _read_http_code
+  check_http_status "$HTTP_CODE" "$body" "request" || return 1
 
   # If async, poll for results
   if [[ ${#URLS[@]} -gt $MAX_SYNC_URLS ]]; then
     local snapshot_id
-    snapshot_id=$(echo "$body" | jq -r '.snapshot_id // empty')
-    if [[ -z "$snapshot_id" ]]; then
-      echo "Error: no snapshot_id in response: ${body}" >&2
-      return 1
-    fi
+    snapshot_id=$(extract_snapshot_id "$body") || return 1
     "${SCRIPT_DIR}/indeed_poll_and_fetch.sh" "$snapshot_id"
   else
     echo "$body"
