@@ -8,6 +8,9 @@ description: >
   any Indeed-related recruiting research. Requires BRIGHTDATA_API_KEY env var.
   Supports: job search by keyword/location/URL, company lookup by URL/keyword/industry,
   batch collection with polling, and structured JSON output.
+version: 1.0.0
+license: MIT
+allowed-tools: Bash
 metadata: {"openclaw":{"requires":{"env":["BRIGHTDATA_API_KEY"],"bins":["curl","jq"]},"primaryEnv":"BRIGHTDATA_API_KEY"}}
 ---
 
