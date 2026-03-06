@@ -24,7 +24,7 @@ Options:
   --help               Show this help message
 
 Exit Codes:
-  0    At least one snapshot fetched successfully
+  0    Success (results fetched, or no pending snapshots)
   1    Error occurred
   2    All snapshots still running (none ready)
 
@@ -44,7 +44,8 @@ check_stale() {
   entry_epoch=$(date -u -d "$triggered_at" +%s 2>/dev/null || \
                 date -u -jf "%Y-%m-%dT%H:%M:%S" "${triggered_at%%Z*}" +%s 2>/dev/null || \
                 echo "0")
-  local age_hours=$(( (now_epoch - entry_epoch) / 3600 ))
+  local age_hours
+  age_hours=$(( (now_epoch - entry_epoch) / 3600 ))
 
   if [[ "$age_hours" -ge "$STALE_THRESHOLD_HOURS" ]]; then
     echo "Warning: stale pending entry (${age_hours}h old): ${description}" >&2

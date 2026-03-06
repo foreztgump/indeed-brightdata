@@ -51,10 +51,15 @@ parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --help) show_help ;;
-      --timeout) TIMEOUT="$2"; shift 2 ;;
-      --interval) INTERVAL="$2"; shift 2 ;;
-      --description) DESCRIPTION="$2"; shift 2 ;;
-      --dataset-type) DATASET_TYPE="$2"; shift 2 ;;
+      --timeout|--interval|--description|--dataset-type)
+        [[ -n "${2:-}" ]] || { echo "Error: $1 requires a value" >&2; exit 1; }
+        case "$1" in
+          --timeout) TIMEOUT="$2" ;;
+          --interval) INTERVAL="$2" ;;
+          --description) DESCRIPTION="$2" ;;
+          --dataset-type) DATASET_TYPE="$2" ;;
+        esac
+        shift 2 ;;
       -*) echo "Unknown option: $1" >&2; exit 1 ;;
       *) SNAPSHOT_ID="$1"; shift ;;
     esac
