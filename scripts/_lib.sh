@@ -34,7 +34,13 @@ make_api_request() {
   fi
 
   local response
-  response=$(curl "${curl_args[@]}" "$endpoint")
+  if ! response=$(curl "${curl_args[@]}" "$endpoint"); then
+    echo "Error: network request failed" >&2
+    HTTP_CODE="000"
+    echo "$HTTP_CODE" > "$_LIB_HTTP_CODE_FILE"
+    echo ""
+    return 0
+  fi
   HTTP_CODE=$(echo "$response" | tail -1)
   echo "$HTTP_CODE" > "$_LIB_HTTP_CODE_FILE"
   local body
@@ -113,7 +119,10 @@ get_dataset_id() {
 extract_snapshot_id() {
   local body="$1"
   local snapshot_id
-  snapshot_id=$(echo "$body" | jq -r '.snapshot_id // empty')
+  if ! snapshot_id=$(echo "$body" | jq -r '.snapshot_id // empty' 2>/dev/null); then
+    echo "Error: invalid JSON response: ${body:0:200}" >&2
+    return 1
+  fi
   if [[ -z "$snapshot_id" ]]; then
     echo "Error: no snapshot_id in response: ${body}" >&2
     return 1

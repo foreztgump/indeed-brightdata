@@ -62,7 +62,10 @@ filter_indeed_datasets() {
 
 save_config() {
   local datasets="$1"
-  mkdir -p "$LIB_CONFIG_DIR"
+  if ! mkdir -p "$LIB_CONFIG_DIR"; then
+    echo "Error: failed to create config directory: $LIB_CONFIG_DIR" >&2
+    return 1
+  fi
 
   # Extract company dataset ID (not the known jobs one)
   local company_id
@@ -76,7 +79,10 @@ save_config() {
     --arg company "$company_id" \
     '{jobs: $jobs, company: $company}')
 
-  echo "$config" > "$LIB_DATASETS_FILE"
+  if ! echo "$config" > "$LIB_DATASETS_FILE"; then
+    echo "Error: failed to write config file: $LIB_DATASETS_FILE" >&2
+    return 1
+  fi
   echo "Saved dataset IDs to ${LIB_DATASETS_FILE}" >&2
   echo "  Jobs: ${LIB_JOBS_DATASET_ID}" >&2
   echo "  Company: ${company_id:-not found}" >&2

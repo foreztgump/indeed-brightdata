@@ -7,8 +7,6 @@ export SCRIPT_DIR="${BATS_TEST_DIRNAME}/../scripts"
 # Temp dir for test artifacts
 setup() {
   export TEST_TMPDIR="$(mktemp -d)"
-  export CONFIG_DIR="$TEST_TMPDIR/config"
-  mkdir -p "$CONFIG_DIR"
   export HOME="$TEST_TMPDIR"
 }
 

@@ -53,6 +53,11 @@ parse_args() {
     echo "Run with --help for usage" >&2
     exit 1
   fi
+
+  if ! [[ "$SNAPSHOT_ID" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    echo "Error: invalid snapshot_id format" >&2
+    exit 1
+  fi
 }
 
 poll_status() {
