@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Google",
+    "overall_rating": 4.3,
+    "reviews_count": 45000,
+    "industry": "Technology",
+    "company_size": "10,000+ employees",
+    "headquarters": "Mountain View, CA",
+    "website": "https://google.com",
+    "jobs_count": 3500
+  },
+  {
+    "name": "Startup Inc",
+    "overall_rating": null,
+    "reviews_count": null,
+    "industry": null,
+    "company_size": null,
+    "headquarters": null,
+    "website": null,
+    "jobs_count": null
+  }
+]

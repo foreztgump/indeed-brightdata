@@ -1,0 +1,30 @@
+[
+  {
+    "jobid": "j1",
+    "job_title": "Security Engineer",
+    "company_name": "Acme Corp",
+    "company_rating": 4.2,
+    "company_reviews_count": 150,
+    "job_location": "Austin, TX",
+    "job_type": "Full-time",
+    "salary_formatted": "$120,000 - $150,000 a year",
+    "date_posted": "2 days ago",
+    "url": "https://indeed.com/viewjob?jk=j1",
+    "qualifications": ["5+ years experience", "CISSP certification", "Python proficiency", "Extra qual"],
+    "is_expired": false
+  },
+  {
+    "jobid": "j2",
+    "job_title": "SOC Analyst",
+    "company_name": "SecureTech",
+    "company_rating": null,
+    "company_reviews_count": null,
+    "job_location": "Remote",
+    "job_type": null,
+    "salary_formatted": null,
+    "date_posted": "1 day ago",
+    "url": "https://indeed.com/viewjob?jk=j2",
+    "qualifications": null,
+    "is_expired": false
+  }
+]
