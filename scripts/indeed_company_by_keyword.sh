@@ -10,6 +10,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_DIR
 source "${SCRIPT_DIR}/_lib.sh"
 
+readonly DEFAULT_LIMIT_PER_INPUT=25
+
 show_help() {
   cat >&2 <<'EOF'
 Usage: indeed_company_by_keyword.sh <keyword> [OPTIONS]
@@ -38,7 +40,7 @@ EOF
 parse_args() {
   KEYWORD=""
   LIMIT=""
-  LIMIT_PER_INPUT=""
+  LIMIT_PER_INPUT="$DEFAULT_LIMIT_PER_INPUT"
   NO_WAIT=false
 
   while [[ $# -gt 0 ]]; do

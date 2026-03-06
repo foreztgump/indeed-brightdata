@@ -8,6 +8,11 @@ readonly LIB_JOBS_DATASET_ID="gd_l4dx9j9sscpvs7no2"
 readonly LIB_CONFIG_DIR="${HOME}/.config/indeed-brightdata"
 readonly LIB_DATASETS_FILE="${LIB_CONFIG_DIR}/datasets.json"
 readonly LIB_PENDING_FILE="${LIB_CONFIG_DIR}/pending.json"
+readonly LIB_HISTORY_FILE="${LIB_CONFIG_DIR}/history.json"
+readonly LIB_RESULTS_DIR="${LIB_CONFIG_DIR}/results"
+readonly LIB_CACHE_MAX_AGE_HOURS=6
+readonly LIB_HISTORY_MAX_AGE_DAYS=7
+readonly LIB_STALE_PENDING_HOURS=24
 
 # Global set by make_api_request for callers to inspect
 HTTP_CODE=""
@@ -218,4 +223,155 @@ remove_pending() {
   fi
 
   mv -f "$tmp_file" "$LIB_PENDING_FILE"
+}
+
+# save_result_file <snapshot_id> <json_content>
+# Writes JSON results to results/<snapshot_id>.json. Creates dir if needed.
+save_result_file() {
+  local snapshot_id="$1"
+  local json_content="$2"
+
+  _validate_snapshot_id "$snapshot_id" || return 1
+  mkdir -p "$LIB_RESULTS_DIR"
+
+  local tmp_file
+  tmp_file=$(mktemp "${LIB_RESULTS_DIR}/.result_XXXXXX")
+
+  if ! echo "$json_content" | jq '.' > "$tmp_file" 2>/dev/null; then
+    rm -f "$tmp_file"
+    echo "Error: invalid JSON for result file" >&2
+    return 1
+  fi
+
+  mv -f "$tmp_file" "${LIB_RESULTS_DIR}/${snapshot_id}.json"
+}
+
+# save_history <type> <params_json> <snapshot_id> <result_count> <result_file>
+# Appends a search history entry. Atomic write.
+save_history() {
+  local type="$1"
+  local params_json="$2"
+  local snapshot_id="$3"
+  local result_count="$4"
+  local result_file="$5"
+
+  mkdir -p "$LIB_CONFIG_DIR"
+
+  local existing="[]"
+  if [[ -f "$LIB_HISTORY_FILE" ]]; then
+    existing=$(jq '.' "$LIB_HISTORY_FILE" 2>/dev/null || echo "[]")
+  fi
+
+  local tmp_file
+  tmp_file=$(mktemp "${LIB_CONFIG_DIR}/.history_XXXXXX")
+
+  local timestamp
+  timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+  if ! echo "$existing" | jq \
+    --arg ts "$timestamp" \
+    --arg tp "$type" \
+    --argjson pr "$params_json" \
+    --arg sid "$snapshot_id" \
+    --argjson rc "$result_count" \
+    --arg rf "$result_file" \
+    '. + [{"timestamp": $ts, "type": $tp, "params": $pr, "snapshot_id": $sid, "result_count": $rc, "result_file": $rf}]' \
+    > "$tmp_file"; then
+    rm -f "$tmp_file"
+    echo "Error: failed to update history file" >&2
+    return 1
+  fi
+
+  mv -f "$tmp_file" "$LIB_HISTORY_FILE"
+}
+
+# check_history_cache <keyword> <country> <location>
+# Checks for a matching search in history from the last 6 hours.
+# If found and result file exists, outputs the result file path. Returns 0.
+# If not found, returns 1.
+check_history_cache() {
+  local keyword="$1"
+  local country="$2"
+  local location="$3"
+
+  if [[ ! -f "$LIB_HISTORY_FILE" ]]; then
+    return 1
+  fi
+
+  local now_epoch
+  now_epoch=$(date -u +%s)
+  local cutoff_epoch=$((now_epoch - LIB_CACHE_MAX_AGE_HOURS * 3600))
+
+  local result_file
+  result_file=$(jq -r \
+    --arg kw "$keyword" \
+    --arg co "$country" \
+    --arg loc "$location" \
+    --argjson cutoff "$cutoff_epoch" \
+    '[.[] | select(
+      (.params.keyword // "") == $kw and
+      (.params.country // "") == $co and
+      (.params.location // "") == $loc and
+      ((.timestamp | fromdateiso8601) > $cutoff)
+    )] | sort_by(.timestamp) | last | .result_file // empty' \
+    "$LIB_HISTORY_FILE" 2>/dev/null)
+
+  if [[ -n "$result_file" && -f "$result_file" ]]; then
+    echo "$result_file"
+    return 0
+  fi
+
+  return 1
+}
+
+# cleanup_old_entries
+# Removes history entries older than 7 days and their result files.
+# Removes stale pending entries older than 24 hours.
+cleanup_old_entries() {
+  local now_epoch
+  now_epoch=$(date -u +%s)
+
+  # Clean old history entries
+  if [[ -f "$LIB_HISTORY_FILE" ]]; then
+    local history_cutoff=$((now_epoch - LIB_HISTORY_MAX_AGE_DAYS * 86400))
+
+    # Delete old result files
+    jq -r --argjson cutoff "$history_cutoff" \
+      '.[] | select((.timestamp | fromdateiso8601) <= $cutoff) | .result_file // empty' \
+      "$LIB_HISTORY_FILE" 2>/dev/null | while IFS= read -r file; do
+      [[ -n "$file" && -f "$file" ]] && rm -f "$file"
+    done
+
+    # Remove old entries from history
+    local tmp_file
+    tmp_file=$(mktemp "${LIB_CONFIG_DIR}/.history_XXXXXX")
+    if jq --argjson cutoff "$history_cutoff" \
+      '[.[] | select((.timestamp | fromdateiso8601) > $cutoff)]' \
+      "$LIB_HISTORY_FILE" > "$tmp_file" 2>/dev/null; then
+      mv -f "$tmp_file" "$LIB_HISTORY_FILE"
+    else
+      rm -f "$tmp_file"
+    fi
+  fi
+
+  # Clean stale pending entries (>24h)
+  if [[ -f "$LIB_PENDING_FILE" ]]; then
+    local pending_cutoff=$((now_epoch - LIB_STALE_PENDING_HOURS * 3600))
+
+    jq -r --argjson cutoff "$pending_cutoff" \
+      '.[] | select((.triggered_at | fromdateiso8601) <= $cutoff) | .description // "unknown"' \
+      "$LIB_PENDING_FILE" 2>/dev/null | while IFS= read -r desc; do
+      echo "Warning: removing stale pending entry: ${desc}" >&2
+    done
+
+    local tmp_file
+    tmp_file=$(mktemp "${LIB_CONFIG_DIR}/.pending_XXXXXX")
+    if jq --argjson cutoff "$pending_cutoff" \
+      '[.[] | select((.triggered_at | fromdateiso8601) > $cutoff)]' \
+      "$LIB_PENDING_FILE" > "$tmp_file" 2>/dev/null; then
+      mv -f "$tmp_file" "$LIB_PENDING_FILE"
+    else
+      rm -f "$tmp_file"
+    fi
+  fi
 }

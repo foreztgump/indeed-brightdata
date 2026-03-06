@@ -11,6 +11,8 @@ readonly SCRIPT_DIR
 source "${SCRIPT_DIR}/_lib.sh"
 
 readonly DEFAULT_DOMAIN="indeed.com"
+readonly DEFAULT_LIMIT_PER_INPUT=25
+readonly DEFAULT_DATE_POSTED="Last 7 days"
 
 show_help() {
   cat >&2 <<'EOF'
@@ -30,6 +32,7 @@ Options:
   --radius MILES       Location radius in miles
   --limit N            Max results to return
   --limit-per-input N  Max results per input keyword
+  --all-time           Remove default date filter (default: "Last 7 days")
   --no-wait            Fire-and-forget: trigger and exit immediately
   --help               Show this help message
 
@@ -50,11 +53,11 @@ parse_args() {
   COUNTRY=""
   LOCATION=""
   DOMAIN="$DEFAULT_DOMAIN"
-  DATE_POSTED=""
+  DATE_POSTED="$DEFAULT_DATE_POSTED"
   PAY=""
   RADIUS=""
   LIMIT=""
-  LIMIT_PER_INPUT=""
+  LIMIT_PER_INPUT="$DEFAULT_LIMIT_PER_INPUT"
   NO_WAIT=false
 
   local positional=0
@@ -72,6 +75,7 @@ parse_args() {
           --limit-per-input) LIMIT_PER_INPUT="$2" ;;
         esac
         shift 2 ;;
+      --all-time) DATE_POSTED=""; shift ;;
       --no-wait) NO_WAIT=true; shift ;;
       -*)
         echo "Unknown option: $1" >&2; exit 1 ;;
