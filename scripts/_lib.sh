@@ -131,6 +131,16 @@ extract_snapshot_id() {
   echo "$snapshot_id"
 }
 
+# _validate_snapshot_id <snapshot_id>
+# Validates snapshot_id matches expected format. Returns 1 if invalid.
+_validate_snapshot_id() {
+  local snapshot_id="$1"
+  if [[ ! "$snapshot_id" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    echo "Error: invalid snapshot_id: ${snapshot_id}" >&2
+    return 1
+  fi
+}
+
 # save_pending <snapshot_id> <description> <dataset_type> <script_name>
 # Appends a pending snapshot entry to pending.json. Atomic write via temp+mv.
 # Creates the file and config dir if they don't exist.
@@ -141,11 +151,13 @@ save_pending() {
   local dataset_type="$3"
   local script_name="$4"
 
+  _validate_snapshot_id "$snapshot_id" || return 1
+
   mkdir -p "$LIB_CONFIG_DIR"
 
   local existing="[]"
   if [[ -f "$LIB_PENDING_FILE" ]]; then
-    existing=$(cat "$LIB_PENDING_FILE")
+    existing=$(jq '.' "$LIB_PENDING_FILE" 2>/dev/null || echo "[]")
   fi
 
   # Skip duplicate
@@ -159,22 +171,26 @@ save_pending() {
   local triggered_at
   triggered_at=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
-  echo "$existing" | jq --arg sid "$snapshot_id" \
+  if ! echo "$existing" | jq --arg sid "$snapshot_id" \
     --arg desc "$description" \
     --arg dtype "$dataset_type" \
     --arg scr "$script_name" \
     --arg ts "$triggered_at" \
     '. + [{"snapshot_id": $sid, "description": $desc, "dataset_type": $dtype, "triggered_at": $ts, "script": $scr}]' \
-    > "$tmp_file"
+    > "$tmp_file"; then
+    rm -f "$tmp_file"
+    echo "Error: failed to update pending file" >&2
+    return 1
+  fi
 
   mv -f "$tmp_file" "$LIB_PENDING_FILE"
 }
 
 # load_pending
-# Outputs pending.json contents to stdout. Returns empty array if file missing.
+# Outputs pending.json contents to stdout. Returns empty array if file missing or invalid.
 load_pending() {
   if [[ -f "$LIB_PENDING_FILE" ]]; then
-    cat "$LIB_PENDING_FILE"
+    jq '.' "$LIB_PENDING_FILE" 2>/dev/null || echo "[]"
   else
     echo "[]"
   fi
@@ -185,6 +201,8 @@ load_pending() {
 remove_pending() {
   local snapshot_id="$1"
 
+  _validate_snapshot_id "$snapshot_id" || return 1
+
   if [[ ! -f "$LIB_PENDING_FILE" ]]; then
     return 0
   fi
@@ -192,8 +210,12 @@ remove_pending() {
   local tmp_file
   tmp_file=$(mktemp "${LIB_CONFIG_DIR}/.pending_XXXXXX")
 
-  jq --arg id "$snapshot_id" '[.[] | select(.snapshot_id != $id)]' \
-    "$LIB_PENDING_FILE" > "$tmp_file"
+  if ! jq --arg id "$snapshot_id" '[.[] | select(.snapshot_id != $id)]' \
+    "$LIB_PENDING_FILE" > "$tmp_file"; then
+    rm -f "$tmp_file"
+    echo "Error: failed to update pending file" >&2
+    return 1
+  fi
 
   mv -f "$tmp_file" "$LIB_PENDING_FILE"
 }

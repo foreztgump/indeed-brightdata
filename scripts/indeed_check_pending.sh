@@ -61,7 +61,7 @@ main() {
 
   if [[ "$count" -eq 0 ]]; then
     echo "No pending snapshots." >&2
-    return 0
+    exit 0
   fi
 
   echo "Checking ${count} pending snapshot(s)..." >&2
@@ -79,6 +79,13 @@ main() {
     description=$(echo "$entry" | jq -r '.description')
     local triggered_at
     triggered_at=$(echo "$entry" | jq -r '.triggered_at')
+
+    if ! _validate_snapshot_id "$snapshot_id"; then
+      echo "Error: skipping invalid snapshot_id in pending entry: ${description}" >&2
+      remove_pending "$snapshot_id" 2>/dev/null
+      errors=$((errors + 1))
+      continue
+    fi
 
     check_stale "$triggered_at" "$description"
 
@@ -122,9 +129,9 @@ main() {
   echo "Summary: ${fetched} fetched, ${still_running} still running, ${errors} errors" >&2
 
   if [[ "$fetched" -gt 0 ]]; then
-    return 0
+    exit 0
   elif [[ "$errors" -gt 0 ]]; then
-    return 1
+    exit 1
   else
     exit 2
   fi

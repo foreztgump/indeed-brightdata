@@ -91,3 +91,23 @@ teardown() {
   run remove_pending "s_nonexistent"
   [[ "$status" -eq 0 ]]
 }
+
+@test "save_pending rejects invalid snapshot_id" {
+  run save_pending "s_abc; rm -rf /" "test" "jobs" "test.sh"
+  [[ "$status" -eq 1 ]]
+  [[ "$output" == *"invalid snapshot_id"* ]]
+}
+
+@test "remove_pending rejects invalid snapshot_id" {
+  run remove_pending "../etc/passwd"
+  [[ "$status" -eq 1 ]]
+  [[ "$output" == *"invalid snapshot_id"* ]]
+}
+
+@test "load_pending returns empty array for corrupted file" {
+  mkdir -p "$LIB_CONFIG_DIR"
+  echo "not valid json" > "$LIB_PENDING_FILE"
+  local result
+  result=$(load_pending)
+  [[ "$result" == "[]" ]]
+}
