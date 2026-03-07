@@ -153,6 +153,15 @@ All persistent data is stored under `~/.config/indeed-brightdata/`:
 
 Auto-cleanup runs at the start of `indeed_check_pending.sh`. No data is sent anywhere other than the Bright Data API.
 
+## Security
+
+All scripts source `scripts/_lib.sh` for shared HTTP and persistence functions. The library:
+
+- Makes requests to a **single endpoint**: `https://api.brightdata.com/datasets/v3`
+- Uses **one credential**: `BRIGHTDATA_API_KEY` (sent via `Authorization: Bearer` header)
+- Writes **only** to `~/.config/indeed-brightdata/` (see Data Storage above)
+- Does not read other environment variables, contact other hosts, or modify files outside its config directory
+
 ## For full API parameter details
 
 See `references/api-reference.md` for complete endpoint documentation, response schemas, and country/domain mappings.

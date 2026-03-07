@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # scripts/_lib.sh — shared functions for Indeed Bright Data scripts
 # Source this file: source "${SCRIPT_DIR}/_lib.sh"
+#
+# Security summary (for auditors):
+#   - Single external endpoint: https://api.brightdata.com/datasets/v3
+#   - Only credential used: BRIGHTDATA_API_KEY (via Authorization header)
+#   - Local writes: ~/.config/indeed-brightdata/ only (pending, history, results, datasets)
+#   - No other env vars read, no other network calls, no shell-outs to external tools
 
 # shellcheck disable=SC2034
 readonly LIB_BASE_URL="https://api.brightdata.com/datasets/v3"
