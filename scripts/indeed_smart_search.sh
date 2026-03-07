@@ -72,6 +72,7 @@ parse_args() {
         shift 2 ;;
       --limit)
         [[ -n "${2:-}" ]] || { echo "Error: --limit requires a value" >&2; exit 1; }
+        [[ "$2" =~ ^[0-9]+$ && "$2" -gt 0 ]] || { echo "Error: --limit must be a positive integer" >&2; exit 1; }
         LIMIT="$2"
         shift 2 ;;
       --all-time) ALL_TIME=true; DATE_POSTED=""; shift ;;
@@ -241,8 +242,10 @@ poll_all_snapshots() {
 dedup_and_filter() {
   local raw_json="$1"
   echo "$raw_json" | jq '
-    # Group by jobid, take first of each
-    group_by(.jobid // "") | map(.[0])
+    # Group by jobid, preserving jobs without jobid (use index as fallback)
+    to_entries
+    | group_by(.value.jobid // ("_no_id_" + (.key | tostring)))
+    | map(.[0].value)
     # Filter expired
     | [.[] | select((.is_expired // false) != true)]
     # Sort by date descending
@@ -272,17 +275,12 @@ build_output() {
     date_filter_display="all time"
   fi
 
-  local expanded_to="null"
-  if [[ -n "$date_expanded_to" ]]; then
-    expanded_to="\"${date_expanded_to}\""
-  fi
-
   jq -n \
     --arg query "$KEYWORD" \
     --arg location "$LOCATION" \
     --arg country "$COUNTRY" \
     --arg date_filter "$date_filter_display" \
-    --argjson expanded_to "$expanded_to" \
+    --arg expanded_to_raw "$date_expanded_to" \
     --argjson keywords_used "$keywords_json" \
     --argjson total_raw "$total_raw" \
     --argjson after_dedup "$after_dedup" \
@@ -294,7 +292,7 @@ build_output() {
         "location": $location,
         "country": $country,
         "date_filter": $date_filter,
-        "expanded_to": $expanded_to,
+        "expanded_to": (if $expanded_to_raw == "" then null else $expanded_to_raw end),
         "keywords_used": $keywords_used,
         "total_raw": $total_raw,
         "after_dedup": $after_dedup,
@@ -310,7 +308,7 @@ main() {
   # Check cache unless --force
   if [[ "$FORCE" != true ]]; then
     local cached_file
-    if cached_file=$(check_history_cache "$KEYWORD" "$COUNTRY" "$LOCATION"); then
+    if cached_file=$(check_history_cache "$KEYWORD" "$COUNTRY" "$LOCATION" "$DATE_POSTED"); then
       echo "Using cached results from: ${cached_file}" >&2
       cat "$cached_file"
       return 0

@@ -135,3 +135,25 @@ teardown() {
   run check_history_cache "nurse" "US" "Ohio"
   [[ "$status" -eq 1 ]]
 }
+
+@test "check_history_cache returns 1 when date_posted differs" {
+  mkdir -p "$LIB_RESULTS_DIR"
+  echo '[{"title":"Job"}]' > "$LIB_RESULTS_DIR/snap_date.json"
+
+  local ts
+  ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+  local result_path="${LIB_RESULTS_DIR}/snap_date.json"
+
+  jq -n --arg ts "$ts" --arg rf "$result_path" \
+    '[{"timestamp": $ts, "type": "jobs", "params": {"keyword": "nurse", "country": "US", "location": "Ohio", "date_posted": "Last 7 days"}, "snapshot_id": "snap_date", "result_count": 5, "result_file": $rf}]' \
+    > "$LIB_HISTORY_FILE"
+
+  # Same keyword/country/location but different date_posted should miss
+  run check_history_cache "nurse" "US" "Ohio" ""
+  [[ "$status" -eq 1 ]]
+
+  # Matching date_posted should hit
+  run check_history_cache "nurse" "US" "Ohio" "Last 7 days"
+  [[ "$status" -eq 0 ]]
+  [[ "$output" == "$result_path" ]]
+}

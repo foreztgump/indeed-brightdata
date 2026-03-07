@@ -285,7 +285,7 @@ save_history() {
   mv -f "$tmp_file" "$LIB_HISTORY_FILE"
 }
 
-# check_history_cache <keyword> <country> <location>
+# check_history_cache <keyword> <country> <location> [<date_posted>]
 # Checks for a matching search in history from the last 6 hours.
 # If found and result file exists, outputs the result file path. Returns 0.
 # If not found, returns 1.
@@ -293,6 +293,7 @@ check_history_cache() {
   local keyword="$1"
   local country="$2"
   local location="$3"
+  local date_posted="${4:-}"
 
   if [[ ! -f "$LIB_HISTORY_FILE" ]]; then
     return 1
@@ -307,11 +308,13 @@ check_history_cache() {
     --arg kw "$keyword" \
     --arg co "$country" \
     --arg loc "$location" \
+    --arg dp "$date_posted" \
     --argjson cutoff "$cutoff_epoch" \
     '[.[] | select(
       (.params.keyword // "") == $kw and
       (.params.country // "") == $co and
       (.params.location // "") == $loc and
+      (.params.date_posted // "") == $dp and
       ((.timestamp | fromdateiso8601) > $cutoff)
     )] | sort_by(.timestamp) | last | .result_file // empty' \
     "$LIB_HISTORY_FILE" 2>/dev/null)

@@ -91,7 +91,15 @@ main() {
 
     if ! _validate_snapshot_id "$snapshot_id"; then
       echo "Error: skipping invalid snapshot_id in pending entry: ${description}" >&2
-      remove_pending "$snapshot_id" 2>/dev/null
+      # Direct removal — remove_pending would fail the same validation
+      local tmp_pending
+      tmp_pending=$(mktemp "${LIB_PENDING_FILE}.XXXXXX")
+      if jq --arg sid "$snapshot_id" '[.[] | select(.snapshot_id != $sid)]' \
+        "$LIB_PENDING_FILE" > "$tmp_pending" 2>/dev/null; then
+        mv -f "$tmp_pending" "$LIB_PENDING_FILE"
+      else
+        rm -f "$tmp_pending"
+      fi
       error_count=$((error_count + 1))
       continue
     fi
@@ -116,18 +124,27 @@ main() {
         results=$(make_api_request GET "${LIB_BASE_URL}/snapshot/${snapshot_id}?format=json")
         _read_http_code
         if check_http_status "$HTTP_CODE" "$results" "snapshot fetch for ${snapshot_id}"; then
-          save_result_file "$snapshot_id" "$results"
-          local result_count
-          result_count=$(echo "$results" | jq 'if type == "array" then length else 0 end')
-          local result_file="${LIB_RESULTS_DIR}/${snapshot_id}.json"
-          completed=$(echo "$completed" | jq \
-            --arg sid "$snapshot_id" \
-            --arg desc "$description" \
-            --argjson rc "$result_count" \
-            --arg rf "$result_file" \
-            '. + [{"snapshot_id":$sid,"query_description":$desc,"result_count":$rc,"result_file":$rf}]')
-          remove_pending "$snapshot_id"
-          fetched_count=$((fetched_count + 1))
+          if save_result_file "$snapshot_id" "$results"; then
+            local result_count
+            result_count=$(echo "$results" | jq 'if type == "array" then length else 0 end')
+            local result_file="${LIB_RESULTS_DIR}/${snapshot_id}.json"
+            completed=$(echo "$completed" | jq \
+              --arg sid "$snapshot_id" \
+              --arg desc "$description" \
+              --argjson rc "$result_count" \
+              --arg rf "$result_file" \
+              '. + [{"snapshot_id":$sid,"query_description":$desc,"result_count":$rc,"result_file":$rf}]')
+            remove_pending "$snapshot_id" || echo "Warning: failed to remove pending entry for ${snapshot_id}" >&2
+            fetched_count=$((fetched_count + 1))
+          else
+            echo "Warning: failed to save results for ${snapshot_id}" >&2
+            failed=$(echo "$failed" | jq \
+              --arg sid "$snapshot_id" \
+              --arg desc "$description" \
+              --arg reason "failed to save result file" \
+              '. + [{"snapshot_id":$sid,"query_description":$desc,"reason":$reason}]')
+            error_count=$((error_count + 1))
+          fi
         else
           error_count=$((error_count + 1))
         fi

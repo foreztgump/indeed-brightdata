@@ -25,7 +25,7 @@ Search Indeed for job listings and company info via Bright Data's Web Scraper AP
 
 ## Workflow Decision Tree
 
-```
+```text
 User wants job info?
 ├── Has a specific Indeed URL?
 │   ├── Job URL (/viewjob?) → indeed_jobs_by_url.sh [SYNC — seconds]

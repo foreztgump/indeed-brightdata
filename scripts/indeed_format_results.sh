@@ -120,20 +120,13 @@ read_input() {
   echo "$unwrapped"
 }
 
-# Strip HTML tags from a string
-strip_html() {
-  local input="$1"
-  # shellcheck disable=SC2001
-  echo "$input" | sed 's/<[^>]*>//g'
-}
-
 # Replace null/"null" with a fallback value using jq
 jq_val() {
   local json="$1"
   local field="$2"
   local fallback="$3"
   echo "$json" | jq -r --arg fb "$fallback" "
-    .${field} // null | if . == null or . == \"\" then \$fb else tostring end
+    .${field} // null | if . == null or . == \"\" or . == \"null\" then \$fb else tostring end
   "
 }
 
