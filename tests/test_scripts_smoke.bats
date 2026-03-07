@@ -101,3 +101,15 @@ load helpers/setup
   [[ "$status" -eq 0 ]]
   [[ "$output" == *"Usage:"* ]]
 }
+
+@test "indeed_smart_search.sh --help exits 0" {
+  run "$SCRIPT_DIR/indeed_smart_search.sh" --help
+  [[ "$status" -eq 0 ]]
+  [[ "$output" == *"Usage:"* ]]
+}
+
+@test "indeed_smart_search.sh with no args exits non-zero" {
+  run "$SCRIPT_DIR/indeed_smart_search.sh"
+  [[ "$status" -ne 0 ]]
+  [[ "$output" == *"required"* ]]
+}
