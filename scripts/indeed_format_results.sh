@@ -123,6 +123,7 @@ read_input() {
 # Strip HTML tags from a string
 strip_html() {
   local input="$1"
+  # shellcheck disable=SC2001
   echo "$input" | sed 's/<[^>]*>//g'
 }
 

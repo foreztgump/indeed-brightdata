@@ -11,7 +11,9 @@ readonly SCRIPT_DIR
 source "${SCRIPT_DIR}/_lib.sh"
 
 readonly DEFAULT_DOMAIN="indeed.com"
+# shellcheck disable=SC2034
 readonly DEFAULT_LIMIT_PER_INPUT=25
+# shellcheck disable=SC2034
 readonly DEFAULT_DATE_POSTED="Last 7 days"
 
 show_help() {
