@@ -11,7 +11,7 @@ description: >
 version: 2.0.0
 license: MIT
 allowed-tools: Bash
-metadata: {"openclaw":{"requires":{"env":["BRIGHTDATA_API_KEY"],"bins":["curl","jq"]},"primaryEnv":"BRIGHTDATA_API_KEY"}}
+metadata: {"openclaw":{"requires":{"env":["BRIGHTDATA_API_KEY"],"bins":["curl","jq"]},"primaryEnv":"BRIGHTDATA_API_KEY","configPaths":["~/.config/indeed-brightdata/"]}}
 ---
 
 # Indeed Bright Data Skill
@@ -139,6 +139,19 @@ Run this periodically. If `~/.config/indeed-brightdata/pending.json` exists and 
 ## Caching
 
 Smart search caches results for 6 hours. Identical searches (same keyword + location + country) return cached results without API calls. Use `--force` to bypass. Old results (>7 days) are auto-cleaned by `indeed_check_pending.sh`.
+
+## Data Storage
+
+All persistent data is stored under `~/.config/indeed-brightdata/`:
+
+| File | Purpose | Lifecycle |
+|------|---------|-----------|
+| `datasets.json` | Bright Data dataset IDs | Created on first `indeed_list_datasets.sh --save`, rarely changes |
+| `pending.json` | In-flight async snapshots | Entries added on poll timeout (exit 2) or fire-and-forget (`--no-wait`), removed when fetched or after 24h |
+| `history.json` | Search cache index | Entries added per search, auto-cleaned after 7 days |
+| `results/*.json` | Fetched result data | Written when snapshots complete, auto-cleaned after 7 days |
+
+Auto-cleanup runs at the start of `indeed_check_pending.sh`. No data is sent anywhere other than the Bright Data API.
 
 ## For full API parameter details
 

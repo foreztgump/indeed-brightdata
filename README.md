@@ -165,6 +165,17 @@ scripts/indeed_jobs_by_company.sh "https://www.indeed.com/cmp/Google/jobs"
 
 All scripts support `--help` for detailed usage.
 
+## Data Storage
+
+The skill stores persistent data under `~/.config/indeed-brightdata/`:
+
+- `datasets.json` — Bright Data dataset IDs (created once via `indeed_list_datasets.sh --save`)
+- `pending.json` — In-flight async snapshot tracking (auto-cleaned after 24h)
+- `history.json` — Search cache index for dedup (auto-cleaned after 7 days)
+- `results/*.json` — Fetched search results (auto-cleaned after 7 days)
+
+No data is sent anywhere other than the Bright Data API. Cleanup runs automatically via `indeed_check_pending.sh`.
+
 ## Development
 
 ```bash
