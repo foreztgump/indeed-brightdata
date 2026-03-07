@@ -261,6 +261,7 @@ extract_json() {
   echo "$json_output" | jq -e '.meta.date_filter == "Last 7 days"'
   echo "$json_output" | jq -e '.meta.keywords_used | length >= 1'
   echo "$json_output" | jq -e '.meta.total_raw >= 0'
+  echo "$json_output" | jq -e '.meta.after_dedup >= 0'
   echo "$json_output" | jq -e '.meta.after_filter >= 0'
   echo "$json_output" | jq -e '.results | type == "array"'
 }
@@ -268,7 +269,7 @@ extract_json() {
 @test "smart search --force bypasses cache" {
   # Create a cached result
   mkdir -p "$HOME/.config/indeed-brightdata/results"
-  local cached_content='{"meta":{"query":"cybersecurity","location":"Remote","country":"US","date_filter":"Last 7 days","expanded_to":null,"keywords_used":["cybersecurity"],"total_raw":1,"after_filter":1},"results":[{"jobid":"cached_job","title":"Cached"}]}'
+  local cached_content='{"meta":{"query":"cybersecurity","location":"Remote","country":"US","date_filter":"Last 7 days","expanded_to":null,"keywords_used":["cybersecurity"],"total_raw":1,"after_dedup":1,"after_filter":1},"results":[{"jobid":"cached_job","title":"Cached"}]}'
   echo "$cached_content" > "$HOME/.config/indeed-brightdata/results/smart_cached.json"
 
   local ts

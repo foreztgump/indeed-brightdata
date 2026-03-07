@@ -260,6 +260,7 @@ build_output() {
   local total_raw="$2"
   local keywords_json="$3"
   local date_expanded_to="${4:-}"
+  local after_dedup="${5:-0}"
 
   local after_filter
   after_filter=$(echo "$results" | jq 'length')
@@ -284,6 +285,7 @@ build_output() {
     --argjson expanded_to "$expanded_to" \
     --argjson keywords_used "$keywords_json" \
     --argjson total_raw "$total_raw" \
+    --argjson after_dedup "$after_dedup" \
     --argjson after_filter "$after_filter" \
     --argjson results "$results" \
     '{
@@ -295,6 +297,7 @@ build_output() {
         "expanded_to": $expanded_to,
         "keywords_used": $keywords_used,
         "total_raw": $total_raw,
+        "after_dedup": $after_dedup,
         "after_filter": $after_filter
       },
       "results": $results
@@ -391,7 +394,7 @@ main() {
 
   # Build output envelope
   local output
-  output=$(build_output "$processed" "$total_raw" "$keywords_json" "$date_expanded_to")
+  output=$(build_output "$processed" "$total_raw" "$keywords_json" "$date_expanded_to" "$deduped_count")
 
   # Save result file and history
   local smart_snapshot_id
