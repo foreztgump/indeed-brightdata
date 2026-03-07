@@ -163,7 +163,8 @@ trigger_searches() {
 }
 
 poll_all_snapshots() {
-  local -a snapshot_ids=($1)
+  local -a snapshot_ids
+  read -ra snapshot_ids <<< "$1"
   local -a remaining=("${snapshot_ids[@]}")
   local all_results="[]"
   local elapsed=0
@@ -333,7 +334,8 @@ main() {
     exit 1
   fi
 
-  local -a snapshot_ids=($snapshot_ids_str)
+  local -a snapshot_ids
+  read -ra snapshot_ids <<< "$snapshot_ids_str"
   echo "Triggered ${#snapshot_ids[@]} search(es)" >&2
 
   # Poll all snapshots
@@ -392,7 +394,8 @@ main() {
   output=$(build_output "$processed" "$total_raw" "$keywords_json" "$date_expanded_to")
 
   # Save result file and history
-  local smart_snapshot_id="smart_$(date -u +%s)_$$"
+  local smart_snapshot_id
+  smart_snapshot_id="smart_$(date -u +%s)_$$"
   local result_file="${LIB_RESULTS_DIR}/${smart_snapshot_id}.json"
 
   save_result_file "$smart_snapshot_id" "$output"
