@@ -158,7 +158,7 @@ main() {
           --arg desc "$description" \
           --arg reason "$reason" \
           '. + [{"snapshot_id":$sid,"query_description":$desc,"reason":$reason}]')
-        remove_pending "$snapshot_id"
+        remove_pending "$snapshot_id" || echo "Warning: failed to remove pending entry for ${snapshot_id}" >&2
         error_count=$((error_count + 1))
         ;;
       *)
