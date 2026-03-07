@@ -97,7 +97,26 @@ npx add-skill foreztgump/indeed-brightdata
 
 ## Usage
 
-### Job Search by Keyword
+### Smart Job Search (Recommended)
+
+```bash
+# Expands keywords, runs parallel searches, deduplicates, caches results
+scripts/indeed_smart_search.sh "cybersecurity" US "Remote"
+
+# Format results for display
+scripts/indeed_smart_search.sh "nursing" US "Texas" | scripts/indeed_format_results.sh --top 5
+
+# Search all dates (default is last 7 days)
+scripts/indeed_smart_search.sh "data science" US "New York, NY" --all-time
+
+# Skip keyword expansion
+scripts/indeed_smart_search.sh "registered nurse" US "Ohio" --no-expand
+
+# Export to CSV
+scripts/indeed_format_results.sh --type jobs --format csv results.json
+```
+
+### Single Keyword Search
 
 ```bash
 scripts/indeed_jobs_by_keyword.sh "software engineer" US "Austin, TX"
@@ -132,8 +151,10 @@ scripts/indeed_jobs_by_company.sh "https://www.indeed.com/cmp/Google/jobs"
 
 | Script | Purpose |
 |--------|---------|
+| `indeed_smart_search.sh` | **Smart job search** with keyword expansion, dedup, caching |
+| `indeed_format_results.sh` | Format results for display (summary, CSV) |
 | `indeed_jobs_by_url.sh` | Collect job details from Indeed URLs |
-| `indeed_jobs_by_keyword.sh` | Search jobs by keyword/location |
+| `indeed_jobs_by_keyword.sh` | Single-keyword job search (used by smart search) |
 | `indeed_jobs_by_company.sh` | Discover jobs from a company page |
 | `indeed_company_by_url.sh` | Collect company info from URLs |
 | `indeed_company_by_keyword.sh` | Search companies by keyword |

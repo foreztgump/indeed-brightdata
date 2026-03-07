@@ -10,6 +10,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly SCRIPT_DIR
 source "${SCRIPT_DIR}/_lib.sh"
 
+# shellcheck disable=SC2034
+readonly DEFAULT_LIMIT_PER_INPUT=25
+
 show_help() {
   cat >&2 <<'EOF'
 Usage: indeed_company_by_industry.sh <industry> <state> [OPTIONS]
@@ -40,7 +43,7 @@ parse_args() {
   INDUSTRY=""
   STATE=""
   LIMIT=""
-  LIMIT_PER_INPUT=""
+  LIMIT_PER_INPUT="$DEFAULT_LIMIT_PER_INPUT"
   NO_WAIT=false
 
   local positional=0
